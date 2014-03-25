@@ -4,21 +4,35 @@
             box-sizing: border-box;
 }
 
- html{
+html{
     font-size: 62.5%;
+    height: 100%;
 }
 
 body{
-    background: #eee;
-    color: #666;
+    background-color: #f6f6f6;
+/*    background-image: repeating-linear-gradient(45deg, #fff, #fff 2px, #eee 2px, #eee 4px);
+    background-size: 4px;*/
+    color: #999;
+    height: 100%;
     font-family: 'Ubuntu', sans-serif;
     font-size: 1.6rem;
     font-size: 16px;
     margin:0;
 }
 
+a{
+    color: #333;
+    text-decoration: none;
+}
+
+p{
+    line-height: 2;
+}
+
 .content{
     background: #fff;
+    min-height: 100%;
     margin: 0 auto;
     max-width: 80em;
 }
@@ -27,5 +41,92 @@ body{
     padding: 4rem;
 }
 
+.main-nav{
+    background: rgba(0, 0, 0, .5);
+    list-style-type: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.main-nav.parked{
+    position: fixed;
+}
+
+.main-nav-list{
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.main-nav-item{
+    display: inline-block;
+    margin: 0 -1rem;
+    vertical-align: middle;
+
+    transition: margin .5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.parked .main-nav-item{
+    display: block;
+    float: left;
+    clear: left;
+}
+
+.main-nav-item:hover{
+    margin: 0 4rem;
+}
+
+.parked .main-nav-item{
+    margin: 10px 0 0 10px;
+}
+
+.main-nav-link-wrapper{
+    background: #eee;
+    border-radius: 5%;
+    width: 200px;
+    height: 200px;
+    transition: all .5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.parked .main-nav-link-wrapper{
+    width: 100px;
+    height: 100px;
+}
 
 
+.main-nav-link:hover .main-nav-link-wrapper{
+    background: #ccc;
+    border-radius: 100%;
+}
+
+.main-nav-item:nth-of-type(1) .main-nav-link:hover .main-nav-link-wrapper{
+    background-color: #89CFE4;
+}
+.main-nav-item:nth-of-type(2) .main-nav-link:hover .main-nav-link-wrapper{
+    background-color: #F0CA03;
+}
+.main-nav-item:nth-of-type(3) .main-nav-link:hover .main-nav-link-wrapper{
+    background-color: #F26005;
+}
+.main-nav-item:nth-of-type(4) .main-nav-link:hover .main-nav-link-wrapper{
+    background-color: #FA8A0E;
+}
+
+.main-nav-link i{
+    color: #ccc;
+    font-size: 100px;
+    margin-top: 50px;
+}
+
+.parked .main-nav-link i{
+    font-size: 50px;
+    margin-top: 25px;
+}
+
+
+.main-nav-link:hover i{
+    color: #fff;
+}
