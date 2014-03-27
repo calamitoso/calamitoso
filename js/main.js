@@ -1,120 +1,103 @@
+/* global calamitoso, jQuery, $ */
 
 window.calamitoso = window.calamitoso || {};
 
-calamitoso.ui = function($){
+(calamitoso.ui = function($){
 
     'use strict';
 
     //private members
-    var ns      = calamitoso.ui || {},
-        cache   = {
+    var _ns      = calamitoso.ui || {},
+        _cache   = {
             'mainNav'           : $('.main-nav'),
-            'mainNavItems'      : $('.main-nav-item')
+            'mainNavLinks'      : $('.main-nav-link')
         },
-        touchEnabled = ( 'ontouchstart' in window || 'onmsgesturechange' in window );
+        _touchEnabled = ( 'ontouchstart' in window || 'onmsgesturechange' in window );
 
     //public members
-    ns.getTouchEnabled = function(){
-        return touchEnabled;
+    _ns.getTouchEnabled = function(){
+        return _touchEnabled;
     };
 
     //main navigation module
     (function(){
 
         //private members
-        var _isHome = false,
-            toggle = function(){
-                _isHome = !_isHome;
-
+        var _isHome,
+            _setHomeMode = function(value){
+                _isHome = value;
                 if(_isHome){
                     //send to center
-                    cache.mainNav.removeClass('main-nav-is-parked');
+                    _cache.mainNav.addClass('main-nav-is-home');
                 }else{
                     //park on the side
-                    cache.mainNav.addClass('main-nav-is-parked');
+                    _cache.mainNav.removeClass('main-nav-is-home');
+                }
+            },
+            _parseLink = function(link){
+                var hash = link.hash.replace('#','');
+                if(_isHome || hash === 'home'){
+                    _setHomeMode(!_isHome);
                 }
             };
 
         //public members
-        ns.mainNav = {};
-
-        // ns.mainNav.setIsHome = function(value){
-        //     _isHome = Boolean(value);
-        //     return _isHome;
-        // };
-
-        // var onItemClick = function(e){
-        //     calamitoso.ui.mainNav.toggle();
-        //     e.preventDefault();
-        // };
+        _ns.mainNav = {};
 
         //expose nav init
-        ns.mainNav.init = function(){
+        _ns.mainNav.init = function(){
 
             //set initial main nav state
-            _isHome = true;
+            _setHomeMode(true);
 
             //attach event listeners to buttons
-            cache.mainNavItems.on('click', function(e){
+            _cache.mainNavLinks.on('click', function(e){
+
+                var trigger = $(this);
 
                 if( calamitoso.ui.getTouchEnabled() ){
                     //hijack hover actions
-                   //$(this).addClass('main-nav-item-no-hover');
+                    trigger.addClass('main-nav-link-pseudo-hover');
+                    setTimeout(function(){
+                        trigger.removeClass('main-nav-link-pseudo-hover');
+                        _parseLink(trigger[0]);
+                    }, 500);
                 }else{
-                    toggle();
+                    _parseLink(trigger[0]);
                 }
 
-                e.preventDefault();
             });
 
-
-        }
-
-        // ns.mainNav.toggle = function(){
-
-        //     _isHome = !_isHome;
-
-        //     if(_isHome){
-        //         //send to center
-        //         cache.mainNav.removeClass('main-nav-is-parked');
-        //     }else{
-        //         //park on the side
-        //         cache.mainNav.addClass('main-nav-is-parked');
-        //     }
-        // };
+        };
 
     }());
 
     //app initialization module
     (function(){
 
-        //private memebers
-        var _init = function(){
-            //append capabilities classes
+        //expose app init
+        _ns.init = function(){
+            //append capabilities
             var className = calamitoso.ui.getTouchEnabled() ? 'touch' : 'no-touch';
             $('html').addClass(className);
             //initialize main nav module
             calamitoso.ui.mainNav.init();
-            //unregister init function
+            //unregister init function after first use
             delete calamitoso.ui.init;
-        }
-
-        //public members
-        //expose init method
-        ns.init = function(){
-            _init();
         };
 
     }());
 
-    return ns;
+    return _ns;
 
-}(jQuery);
+})(jQuery);
 
 
 $(function() {
 
-    //testing overwrite
+    'use strict';
+
+    //touch testing overwrite
     // calamitoso.ui.getTouchEnabled = function(){
     //     return true;
     // };
