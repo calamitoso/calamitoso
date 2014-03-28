@@ -1,5 +1,11 @@
 /* global calamitoso, jQuery, $ */
 
+// if ( !('parseHash' in String.prototype) ) {
+//     String.prototype.parseHash = function(link){
+//         return link.hash.replace('#', '');
+//     }
+// }
+
 window.calamitoso = window.calamitoso || {};
 
 (calamitoso.ui = function($){
@@ -12,7 +18,7 @@ window.calamitoso = window.calamitoso || {};
             'mainNav'           : $('.main-nav'),
             'mainNavLinks'      : $('.main-nav-link')
         },
-        _touchEnabled = ( 'ontouchstart' in window || 'onmsgesturechange' in window );
+        _touchEnabled = ( 'ontouchstart' in window || navigator.msMaxTouchPoints);
 
     //public members
     _ns.getTouchEnabled = function(){
@@ -23,9 +29,9 @@ window.calamitoso = window.calamitoso || {};
     (function(){
 
         //private members
-        var _isHome,
-            _setHomeMode = function(value){
-                _isHome = value;
+        var _isHome = false,
+            _resetHomeMode = function(hash){
+                _isHome = ( hash === 'home' ) ? !_isHome : false;
                 if(_isHome){
                     //send to center
                     _cache.mainNav.addClass('main-nav-is-home');
@@ -33,40 +39,41 @@ window.calamitoso = window.calamitoso || {};
                     //park on the side
                     _cache.mainNav.removeClass('main-nav-is-home');
                 }
-            },
-            _parseLink = function(link){
-                var hash = link.hash.replace('#','');
-                if(_isHome || hash === 'home'){
-                    _setHomeMode(!_isHome);
-                }
             };
 
         //public members
         _ns.mainNav = {};
 
+        _ns.mainNav.loadSection = function(e){
+
+            var selectedItem = $(this);
+
+            var hash = selectedItem[0].hash.replace('#', '');
+
+             _cache.mainNavLinks.removeClass('main-nav-link-pseudo-hover');
+             selectedItem.addClass('main-nav-link-pseudo-hover');
+
+            if( calamitoso.ui.getTouchEnabled() ){
+                e.preventDefault();
+                //hover simulation
+                setTimeout(function(){
+                    _resetHomeMode(hash);
+                    document.location.hash = selectedItem[0].hash;
+                }, 750);
+            }else{
+                _resetHomeMode(hash);
+            }
+        }
+
         //expose nav init
         _ns.mainNav.init = function(){
 
-            //set initial main nav state
-            _setHomeMode(true);
-
             //attach event listeners to buttons
-            _cache.mainNavLinks.on('click', function(e){
+            _cache.mainNavLinks.on('click', calamitoso.ui.mainNav.loadSection );
 
-                var trigger = $(this);
-
-                if( calamitoso.ui.getTouchEnabled() ){
-                    //hijack hover actions
-                    trigger.addClass('main-nav-link-pseudo-hover');
-                    setTimeout(function(){
-                        trigger.removeClass('main-nav-link-pseudo-hover');
-                        _parseLink(trigger[0]);
-                    }, 500);
-                }else{
-                    _parseLink(trigger[0]);
-                }
-
-            });
+            //set initial main nav state
+            var hash = document.location.hash.replace('#', '') || 'home';
+            $('#main-nav-item-' + hash).children('.main-nav-link').trigger('click');
 
         };
 
@@ -77,11 +84,17 @@ window.calamitoso = window.calamitoso || {};
 
         //expose app init
         _ns.init = function(){
-            //append capabilities
+
+            //append touch capability
             var className = calamitoso.ui.getTouchEnabled() ? 'touch' : 'no-touch';
             $('html').addClass(className);
+
+            //initialize 3rd party plugins
+            FastClick.attach(document.body);
+
             //initialize main nav module
             calamitoso.ui.mainNav.init();
+
             //unregister init function after first use
             delete calamitoso.ui.init;
         };
@@ -97,7 +110,7 @@ $(function() {
 
     'use strict';
 
-    //touch testing overwrite
+    // touch testing overwrite
     // calamitoso.ui.getTouchEnabled = function(){
     //     return true;
     // };
