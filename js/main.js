@@ -15,6 +15,7 @@ window.calamitoso = window.calamitoso || {};
     //private members
     var _ns      = calamitoso.ui || {},
         _cache   = {
+            'panels'            : $('.panel'),
             'mainNav'           : $('.main-nav'),
             'mainNavLinks'      : $('.main-nav-link')
         },
@@ -39,41 +40,81 @@ window.calamitoso = window.calamitoso || {};
                     //park on the side
                     _cache.mainNav.removeClass('main-nav-is-home');
                 }
-            };
+                return _isHome;
+            },
+            _resetMainNavItem = function(hash){
+                //turn off currently selected item
+                _cache.mainNavLinks.removeClass('main-nav-link-pseudo-hover');
+                //turn on requested menu item
+                _selectedItem = $('#main-nav-item-' + hash).children('.main-nav-link');
+                _selectedItem.addClass('main-nav-link-pseudo-hover');
+            },
+            _selectedItem,
+            _browserTriggeredScroll = false;
 
         //public members
         _ns.mainNav = {};
 
-        _ns.mainNav.loadSection = function(e){
+        _ns.mainNav.onItemSelection = function(e){
 
-            var selectedItem = $(this);
+            _selectedItem = $(this);
+            //is selected item a link?
 
-            var hash = selectedItem[0].hash.replace('#', '');
+            var _hash = _selectedItem[0].hash.replace('#', '');
 
-             _cache.mainNavLinks.removeClass('main-nav-link-pseudo-hover');
-             selectedItem.addClass('main-nav-link-pseudo-hover');
+            _browserTriggeredScroll = true;
+            _resetMainNavItem(_hash);
 
             if( calamitoso.ui.getTouchEnabled() ){
                 e.preventDefault();
                 //hover simulation
                 setTimeout(function(){
-                    _resetHomeMode(hash);
-                    document.location.hash = selectedItem[0].hash;
+                    _resetHomeMode(_hash);
+                    document.location.hash = _selectedItem[0].hash;
                 }, 750);
             }else{
-                _resetHomeMode(hash);
+                _resetHomeMode(_hash);
             }
-        }
+        };
 
         //expose nav init
         _ns.mainNav.init = function(){
 
+            var _lastId,
+                _documentTitle = document.title;
+
             //attach event listeners to buttons
-            _cache.mainNavLinks.on('click', calamitoso.ui.mainNav.loadSection );
+            _cache.mainNavLinks.on('click', calamitoso.ui.mainNav.onItemSelection );
+
+            //register scroll listener
+            $(window).scroll( function(e){
+
+                //if the scroll event is triggered by a natural link action, exit
+                if(_browserTriggeredScroll){
+                    _browserTriggeredScroll = false;
+                    return;
+                }
+
+                var fromTop = $(this).scrollTop();
+
+                var cur = _cache.panels.map(function(){
+                    if ($(this).offset().top <= fromTop) return this;
+                });
+
+                var id = cur.last().attr('id');
+                if( id != _lastId ){
+                    _lastId = id;
+                    _resetMainNavItem(_lastId);
+                    //reset browser history
+                    window.history.pushState({'id': id}, id, '#' + id);
+                }
+
+            });
 
             //set initial main nav state
             var hash = document.location.hash.replace('#', '') || 'home';
-            $('#main-nav-item-' + hash).children('.main-nav-link').trigger('click');
+            _selectedItem = $('#main-nav-item-' + hash).children('.main-nav-link');
+            _selectedItem.trigger('click');
 
         };
 
@@ -118,5 +159,3 @@ $(function() {
     calamitoso.ui.init();
     console.log(calamitoso);
 });
-
-
