@@ -1,12 +1,21 @@
 /* global calamitoso, jQuery, $ */
 
-// if ( !('parseHash' in String.prototype) ) {
-//     String.prototype.parseHash = function(link){
-//         return link.hash.replace('#', '');
-//     }
-// }
-
 window.calamitoso = window.calamitoso || {};
+
+(calamitoso.common = function(){
+    var _ns = calamitoso.common || {};
+    _ns.getQueryVariable = function(variable){
+           var query = window.location.search.substring(1);
+           var vars = query.split("&");
+           for (var i=0;i<vars.length;i++) {
+                var pair = vars[i].split("=");
+                if(pair[0] == variable){
+                    return pair[1];
+                }
+           }
+    };
+    return _ns;
+}());
 
 (calamitoso.ui = function($){
 
@@ -28,70 +37,95 @@ window.calamitoso = window.calamitoso || {};
 
     //main navigation module
     (function(){
-
-        //private members
-        var _isHome = false,
-            _resetHomeMode = function(hash){
-                _isHome = ( hash === 'home' ) ? !_isHome : false;
-                if(_isHome){
-                    //send to center
-                    _cache.mainNav.addClass('main-nav-is-home');
-                }else{
-                    //park on the side
-                    _cache.mainNav.removeClass('main-nav-is-home');
+        var _browserTriggeredScroll,
+            _contentFolder,
+            _currentSection,
+            _loadedSections,
+            _extractSectionId = function(source){
+                var _sectionId = (source || '').replace('/', '') || 'home',
+                    _indexOf = _sectionId.indexOf(_contentFolder);
+                if( _indexOf !== -1 ){
+                    _sectionId = _sectionId.substring(_indexOf + 8);
                 }
-                return _isHome;
+                return _sectionId.substr(0, _sectionId.lastIndexOf('.')) || _sectionId;
             },
-            _resetMainNavItem = function(hash){
+            _onItemSelection = function(e){
+
+                //take over the link action
+                e.preventDefault();
+
+                //extract the requested page name from the link
+                var _sectionId = _extractSectionId($(this)[0].pathname);
+                console.log('button triggered', _sectionId);
+                _loadSection(_sectionId);
+            },
+            _loadSection = function(sectionId, fromScroll){
+
+                fromScroll = fromScroll || false;
+
                 //turn off currently selected item
                 _cache.mainNavLinks.removeClass('main-nav-link-pseudo-hover');
+
                 //turn on requested menu item
-                _selectedItem = $('#main-nav-item-' + hash).children('.main-nav-link');
+                var _selectedItem = $('#main-nav-item-' + sectionId).children('.main-nav-link');
                 _selectedItem.addClass('main-nav-link-pseudo-hover');
-            },
-            _selectedItem,
-            _browserTriggeredScroll = false;
 
-        //public members
-        _ns.mainNav = {};
+                //simulate hover on touch devices
+                var timeout = ( calamitoso.ui.getTouchEnabled() && !fromScroll) ? 750 : 0;
+                // console.log('-- sectionId', sectionId);
+                // console.log('-- fromScroll', fromScroll);
+                // console.log('-- timeout', timeout);
 
-        _ns.mainNav.onItemSelection = function(e){
+                //replace page title
+                document.title = 'calamitoso.github.io | ' + sectionId;
 
-            _selectedItem = $(this);
-            //is selected item a link?
+                console.log('_loadSection', sectionId);
 
-            var _hash = _selectedItem[0].hash.replace('#', '');
-
-            _browserTriggeredScroll = true;
-            _resetMainNavItem(_hash);
-
-            if( calamitoso.ui.getTouchEnabled() ){
-                e.preventDefault();
-                //hover simulation
                 setTimeout(function(){
-                    _resetHomeMode(_hash);
-                    document.location.hash = _selectedItem[0].hash;
-                }, 750);
-            }else{
-                _resetHomeMode(_hash);
-            }
-        };
+                    if( sectionId === 'home' ){
+                        //re write history
+                        window.history.pushState({'sectionId': sectionId}, sectionId, '/');
 
-        //expose nav init
-        _ns.mainNav.init = function(){
+                        //add main nav modal
+                        _cache.mainNav.addClass('main-nav-is-home');
+                    }else{
+                        //re write history
+                        window.history.pushState({'sectionId': sectionId}, sectionId, '/' + _contentFolder + sectionId + '.html');
 
-            var _lastId,
-                _documentTitle = document.title;
+                        //remove main nav modal
+                        _cache.mainNav.removeClass('main-nav-is-home');
 
-            //attach event listeners to buttons
-            _cache.mainNavLinks.on('click', calamitoso.ui.mainNav.onItemSelection );
+                        //switch off the scroll event listener
+                        _browserTriggeredScroll = true;
 
-            //register scroll listener
-            $(window).scroll( function(e){
+                        //only load subpages once
+                        if(!_loadedSections[sectionId]){
+                            $.ajax({
+                                url: '/' + _contentFolder + sectionId + '.html',
+                                success: function(data){
+                                    $('#' + sectionId).html( $(data).find('#' + sectionId).children() );
+                                    _loadedSections[sectionId] = $('#' + sectionId);
+                                }
+                            });
+                        }
+
+                        //scroll section into view
+                        $('html, body').animate(
+                            {scrollTop: $('#' + sectionId).offset().top },
+                            200,
+                            function(){
+                                //restore scroll event listener
+                                _browserTriggeredScroll = false;
+                            }
+                        );
+                    }
+                }, timeout);
+            },
+            _onScroll = function(e){
 
                 //if the scroll event is triggered by a natural link action, exit
                 if(_browserTriggeredScroll){
-                    _browserTriggeredScroll = false;
+                    console.log('ignored', e);
                     return;
                 }
 
@@ -101,20 +135,33 @@ window.calamitoso = window.calamitoso || {};
                     if ($(this).offset().top <= fromTop) return this;
                 });
 
-                var id = cur.last().attr('id');
-                if( id != _lastId ){
-                    _lastId = id;
-                    _resetMainNavItem(_lastId);
-                    //reset browser history
-                    window.history.pushState({'id': id}, id, '#' + id);
+                var sectionId = cur.last().attr('id');
+                if( sectionId !== _currentSection ){
+                    _currentSection = sectionId;
+                    console.log('scroll triggered', _currentSection);
+                    _loadSection(_currentSection, true);
                 }
+            };
 
-            });
+        //public members
+        _ns.mainNav = {};
 
-            //set initial main nav state
-            var hash = document.location.hash.replace('#', '') || 'home';
-            _selectedItem = $('#main-nav-item-' + hash).children('.main-nav-link');
-            _selectedItem.trigger('click');
+        //expose nav init
+        _ns.mainNav.init = function(options){
+
+            //initialize private vars
+            _contentFolder  = options.contentFolder;
+            _currentSection = _extractSectionId(options.section);
+            _loadedSections = {};
+
+            //load current section
+            _loadSection(_currentSection);
+
+            //register button event listener
+            _cache.mainNavLinks.on('click', _onItemSelection );
+
+            //register scroll listener
+            $(window).on('scroll', _onScroll );
 
         };
 
@@ -124,7 +171,7 @@ window.calamitoso = window.calamitoso || {};
     (function(){
 
         //expose app init
-        _ns.init = function(){
+        _ns.init = function(options){
 
             //append touch capability
             var className = calamitoso.ui.getTouchEnabled() ? 'touch' : 'no-touch';
@@ -134,7 +181,7 @@ window.calamitoso = window.calamitoso || {};
             FastClick.attach(document.body);
 
             //initialize main nav module
-            calamitoso.ui.mainNav.init();
+            calamitoso.ui.mainNav.init(options);
 
             //unregister init function after first use
             delete calamitoso.ui.init;
@@ -144,18 +191,23 @@ window.calamitoso = window.calamitoso || {};
 
     return _ns;
 
-})(jQuery);
+}(jQuery));
 
 
 $(function() {
 
     'use strict';
 
-    // touch testing overwrite
+    // touch-testing overwrite
     // calamitoso.ui.getTouchEnabled = function(){
     //     return true;
     // };
 
-    calamitoso.ui.init();
+    calamitoso.ui.init({
+        contentFolder: 'content/',
+        section: calamitoso.common.getQueryVariable('section')
+    });
     console.log(calamitoso);
 });
+
+//

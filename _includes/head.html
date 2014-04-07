@@ -6,6 +6,16 @@
         <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Ubuntu:300,400,700' type='text/css'>
         <link rel='stylesheet' href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
         <link rel='stylesheet' href="{{ site.baseurl }}css/main.css" >
+        <script type="text/javascript">
+            //if the site is not accessed from the root, redirect
+            console.log(document.location.pathname);
+            if(!(
+                document.location.pathname === '/' ||
+                document.location.pathname === '/index.html'
+            )){
+                window.location = '/?section='+ document.location.pathname;
+            }
+        </script>
     </head>
     <body>
         <div class="content">
