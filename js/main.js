@@ -37,8 +37,7 @@ window.calamitoso = window.calamitoso || {};
 
     //main navigation module
     (function(){
-        var _browserTriggeredScroll,
-            _contentFolder,
+        var _contentFolder,
             _currentSection,
             _loadedSections,
             _extractSectionId = function(source){
@@ -56,12 +55,43 @@ window.calamitoso = window.calamitoso || {};
 
                 //extract the requested page name from the link
                 var _sectionId = _extractSectionId($(this)[0].pathname);
-                console.log('button triggered', _sectionId);
                 _loadSection(_sectionId);
             },
             _loadSection = function(sectionId, fromScroll){
 
+                var _scrollToItem = function(sectionId){
+                    //switch off the scroll event listener
+                    $(window).off('scroll', _onScroll );
+                    //scroll section into view
+                    $('body').animate(
+                        {scrollTop: $('#' + sectionId).offset().top },
+                        250,
+                        function(){
+                            //restore scroll event listener
+                            //todo: why a timeout 
+                            setTimeout(function(){
+                                $(window).on('scroll', _onScroll );
+                            }, 100);
+                        }
+                    );
+                };
+
+                //sanitize params
                 fromScroll = fromScroll || false;
+
+                // console.log('--- currentSection', _currentSection);
+                // console.log('--- sectionId', sectionId);
+                // console.log('--- fromScroll', fromScroll);
+
+                //track current section
+                if(_currentSection === sectionId){
+                    if(!fromScroll) _scrollToItem(sectionId);
+                    return;
+                }else{
+                    _currentSection = sectionId;
+                }
+
+                console.log('*** _loadSection currentSection', _currentSection);
 
                 //turn off currently selected item
                 _cache.mainNavLinks.removeClass('main-nav-link-pseudo-hover');
@@ -72,14 +102,9 @@ window.calamitoso = window.calamitoso || {};
 
                 //simulate hover on touch devices
                 var timeout = ( calamitoso.ui.getTouchEnabled() && !fromScroll) ? 750 : 0;
-                // console.log('-- sectionId', sectionId);
-                // console.log('-- fromScroll', fromScroll);
-                // console.log('-- timeout', timeout);
 
                 //replace page title
                 document.title = 'calamitoso.github.io | ' + sectionId;
-
-                console.log('_loadSection', sectionId);
 
                 setTimeout(function(){
                     if( sectionId === 'home' ){
@@ -95,9 +120,6 @@ window.calamitoso = window.calamitoso || {};
                         //remove main nav modal
                         _cache.mainNav.removeClass('main-nav-is-home');
 
-                        //switch off the scroll event listener
-                        _browserTriggeredScroll = true;
-
                         //only load subpages once
                         if(!_loadedSections[sectionId]){
                             $.ajax({
@@ -109,38 +131,18 @@ window.calamitoso = window.calamitoso || {};
                             });
                         }
 
-                        //scroll section into view
-                        $('html, body').animate(
-                            {scrollTop: $('#' + sectionId).offset().top },
-                            200,
-                            function(){
-                                //restore scroll event listener
-                                _browserTriggeredScroll = false;
-                            }
-                        );
+                        if(!fromScroll) _scrollToItem(sectionId);
                     }
                 }, timeout);
             },
             _onScroll = function(e){
+                var _offsetFromTop = $(this).scrollTop(),
+                    _panels = _cache.panels.map(function(){
+                        if ($(this).offset().top <= _offsetFromTop) return this;
+                    }),
+                    _lastSectionId = _panels.last().attr('id');
 
-                //if the scroll event is triggered by a natural link action, exit
-                if(_browserTriggeredScroll){
-                    console.log('ignored', e);
-                    return;
-                }
-
-                var fromTop = $(this).scrollTop();
-
-                var cur = _cache.panels.map(function(){
-                    if ($(this).offset().top <= fromTop) return this;
-                });
-
-                var sectionId = cur.last().attr('id');
-                if( sectionId !== _currentSection ){
-                    _currentSection = sectionId;
-                    console.log('scroll triggered', _currentSection);
-                    _loadSection(_currentSection, true);
-                }
+                _loadSection(_lastSectionId, true);
             };
 
         //public members
@@ -151,11 +153,10 @@ window.calamitoso = window.calamitoso || {};
 
             //initialize private vars
             _contentFolder  = options.contentFolder;
-            _currentSection = _extractSectionId(options.section);
             _loadedSections = {};
 
             //load current section
-            _loadSection(_currentSection);
+            _loadSection(_extractSectionId(options.section));
 
             //register button event listener
             _cache.mainNavLinks.on('click', _onItemSelection );
@@ -209,5 +210,3 @@ $(function() {
     });
     console.log(calamitoso);
 });
-
-//
